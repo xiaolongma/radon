@@ -85,7 +85,7 @@ def getArgs():
     parser.add_argument('-p', '--plot', dest='plot', action='store_true',
                         help = '''Enable check plots''')
 
-    parser.add_argument('-f',  dest='file_format', default='.tif',
+    parser.add_argument('-f',  dest='file_format', default='.DMP',
                         help = '''Select type of outout file_format''')   
 
     args = parser.parse_args() 
@@ -164,7 +164,7 @@ def create_phantom( npix , deg , lut ):
     for i in range( num ):
         x0 =  myint( nh * ( 1 + lut[i][0] ) )
         y0 =  myint( nh * ( 1 + lut[i][1] ) )  
-        r  =  myint( nh * lut[i][2] )
+        r  =  nh * lut[i][2]
 
         ii = np.argwhere( np.sqrt( ( x - x0 )**2 + ( y - y0 )**2 ) <= r )
         image[ii[:,0],ii[:,1]] += ( r**2 - ( x0 - x[ii[:,0],ii[:,1]] )**2 - \
@@ -206,9 +206,9 @@ def calc_proj( n , lut , deg , theta , dpc ):
     
     ##  Constant c
     if deg % 2 == 0:
-        c = 2
-    else:
         c = np.pi
+    else:
+        c = 2.0
 
 
     ##  Compute projection
@@ -265,6 +265,11 @@ def write_output_file( array , mode , args ):
         path += '/'     
 
 
+    ##  Get degree
+    deg = args.degree
+    str_deg = '_deg' + str( deg )
+
+
     ##  String for number of pixels
     npix = args.npix
 
@@ -286,7 +291,7 @@ def write_output_file( array , mode , args ):
             name = args.fileout
             filename = path + name + '_pix'
 
-        filename += common + args.file_format
+        filename += common + str_deg + args.file_format
         io.writeImage( filename , array )   
         print('\nWriting sinogram in:\n', filename)
 
@@ -306,13 +311,15 @@ def write_output_file( array , mode , args ):
             string += '_dpc'
 
         if nang < 10:
-            filename += '000' + str( nang ) + string + '.DMP'
+            filename += '000' + str( nang )
         elif nang < 100:
-            filename += '00' + str( nang ) + string + '.DMP'
+            filename += '00' + str( nang ) 
         elif nang < 1000:
-            filename += '0' + str( nang ) + string + '.DMP'
+            filename += '0' + str( nang ) 
         else:
-            filename += str( nang ) + string + args.file_format  
+            filename += str( nang )  
+
+        filename += string + str_deg + args.file_format 
         
         io.writeImage( filename , array )   
         print('\nWriting sinogram in:\n', filename)  
