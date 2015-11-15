@@ -43,7 +43,8 @@ import myImageProcess as proc
 
 
 ####  MY FORMAT VARIABLES
-myFloat = np.float32
+myfloat   = np.float32
+mycomplex = np.complex64
 
 
 
@@ -87,7 +88,7 @@ def getArgs():
                              +' @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
                              +' -g angles.txt use a list of angles (in degrees) saved in a text file')
     
-    parser.add_argument('-c',dest='ctr', type=myFloat,
+    parser.add_argument('-c',dest='ctr', type=myfloat,
                         help='Specify the center of rotation ( default = the middle pixel of the image )') 
     
     parser.add_argument('-e',dest='edge_padding', action='store_true',
@@ -109,8 +110,10 @@ def getArgs():
 
     parser.add_argument('-m',dest='movie', action='store_true',
                         help='Save partial reconstructions in a folder called "fbp_movie"') 
-    
 
+    parser.add_argument('-dpc',dest='dpc', action='store_true',
+                        help='Perform DPC reconstruction') 
+    
     args = parser.parse_args()
     
 
@@ -135,12 +138,14 @@ def getArgs():
 ##########################################################
 ##########################################################
 
-def calc_filter( nfreq , filt ):
+def calc_filter( nfreq , filt , dpc ):
     if filt != 'none':
-        filtarr = 2 * np.arange( nfreq + 1 ) / myFloat( 2 * nfreq )
-        w = 2 * np.pi * np.arange( nfreq + 1 ) / myFloat( 2 * nfreq )
-        d = 1.0
-
+        if dpc is False:
+            filtarr = 2 * np.arange( nfreq + 1 ) / myfloat( 2 * nfreq )
+            w = 2 * np.pi * np.arange( nfreq + 1 ) / myfloat( 2 * nfreq )
+            d = 1.0
+        else:
+            filtarr = np.ones( nfreq + 1 , dtype=mycomplex ) * ( 1.0j ) / ( 2 + np.pi ) 
 
         if filt == 'shepp-logan':
             filtarr[1:] *= np.sin( w[1:] ) / ( 2.0 * d * 2.0 * d * w[1:] )
@@ -154,8 +159,10 @@ def calc_filter( nfreq , filt ):
         elif filt == 'hanning':
             filtarr[1:] *= ( 1.0 + np.cos( w[1:]/d )/2.0 )
 
-        filtarr = np.concatenate( ( filtarr , filtarr[nfreq-1:0:-1] ) , axis=0 )
-
+        if dpc is False:
+            filtarr = np.concatenate( ( filtarr , filtarr[nfreq-1:0:-1] ) , axis=0 )
+        else:
+            filtarr = np.concatenate( ( filtarr , np.conjugate( filtarr[nfreq-1:0:-1] ) ) , axis=0 ) 
 
     else:
         filtarr = np.zeros( 2 * nfreq )
@@ -173,7 +180,7 @@ def calc_filter( nfreq , filt ):
 ##########################################################
 ########################################################## 
 
-def iradon( sino , npix , angles , ctr , filt , interp , args ):
+def iradon( sino , npix , angles , ctr , filt , interp , dpc , args ):
     ##  Get number of angles
     nang = len( angles )
 
@@ -196,7 +203,7 @@ def iradon( sino , npix , angles , ctr , filt , interp , args ):
     if filt != 'none':
         ##  Pre-calculate filter 
         nfreq = 2 * int( 2**( int( np.ceil( np.log2( npix ) ) ) ) )
-        filtarr = calc_filter( nfreq , filt )  
+        filtarr = calc_filter( nfreq , filt , dpc )  
 
 
         ##  Zero-pad projections with the smallest power of 2 >= npix
@@ -223,19 +230,19 @@ def iradon( sino , npix , angles , ctr , filt , interp , args ):
     if npix < img_diag:
         pad = 0.5 * ( img_diag - npix )
         i1 = int( np.ceil( pad ) );  i2 =  npix + int( np.floor( pad ) )
-        sino_op = np.zeros( ( nang , i1 + i2 ) , dtype=myFloat ) 
+        sino_op = np.zeros( ( nang , i1 + i2 ) , dtype=myfloat ) 
         sino_op[:, i1 : i1 + npix ] = sino[:,:]
         ctr += i1
 
     else:
-        sino_op = np.zeros( ( nang , npix ) , dtype=myFloat )
+        sino_op = np.zeros( ( nang , npix ) , dtype=myfloat )
         sino_op[:,:] = sino[:,:]
                  
     ctr = int( ctr )
 
 
     ##  Allocate memory for the reconstruction
-    reco = np.zeros( ( npix , npix ) , dtype=myFloat )
+    reco = np.zeros( ( npix , npix ) , dtype=myfloat )
 
 
     ##  Enable movie
@@ -381,7 +388,7 @@ def main():
     ##  1) Case of equiangular projections distributed in [0,180)
     if args.geometry == '0':
         angles = np.arange( nang )
-        angles = ( angles * np.pi )/myFloat( nang )
+        angles = ( angles * np.pi )/myfloat( nang )
         print('\nDealing with equally angularly spaced projections in [0,180)')
 
     ##  2) Case of list of projection angles in degrees
@@ -417,6 +424,12 @@ def main():
         ctr += i1
 
     
+
+    ##  DPC reconstruction
+    dpc = args.dpc
+    print( 'DPC reconstruction: ' , dpc )
+
+
 
     ##  Get filter type
     filt = args.filt
@@ -455,8 +468,8 @@ def main():
 
     ##  Compute iradon transform
     print('\nPerforming Filtered Backprojection ....\n')
-    reco = np.zeros( ( npix , npix ) , dtype=myFloat )
-    reco[:,:] = iradon( sino[:,::-1] , npix , angles , ctr , filt , interp , args )
+    reco = np.zeros( ( npix , npix ) , dtype=myfloat )
+    reco[:,:] = iradon( sino[:,::-1] , npix , angles , ctr , filt , interp , dpc , args )
 
 
     ##  Rotate reconstruction
