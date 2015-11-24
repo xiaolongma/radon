@@ -206,9 +206,9 @@ def calc_proj( n , lut , deg , theta , dpc ):
     
     ##  Constant c
     if deg % 2 == 0:
-        c = np.pi
-    else:
         c = 2.0
+    else:
+        c = np.pi
 
 
     ##  Compute projection
