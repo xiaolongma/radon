@@ -38,6 +38,7 @@ import myImageIO as io
 import myPrint as pp
 import myImageDisplay as dis
 import myImageProcess as proc
+import filters as fil  
 
 
 
@@ -133,48 +134,6 @@ def getArgs():
 ##########################################################
 ##########################################################
 ####                                                  ####
-####                 CALCULATE FILTER                 ####
-####                                                  ####
-##########################################################
-##########################################################
-
-def calc_filter( nfreq , filt , dpc ):
-    if filt != 'none':
-        if dpc is False:
-            filtarr = 2 * np.arange( nfreq + 1 ) / myfloat( 2 * nfreq )
-            w = 2 * np.pi * np.arange( nfreq + 1 ) / myfloat( 2 * nfreq )
-            d = 1.0
-        else:
-            filtarr = np.ones( nfreq + 1 , dtype=mycomplex ) * ( 1.0j ) / ( 2 * np.pi ) 
-
-        if filt == 'shepp-logan':
-            filtarr[1:] *= np.sin( w[1:] ) / ( 2.0 * d * 2.0 * d * w[1:] )
-
-        elif filt == 'cosine':
-            filtarr[1:] *= np.cos( w[1:] ) / ( 2.0 * d * w[1:] )  
-
-        elif filt == 'hamming':
-            filtarr[1:] *= ( 0.54 + 0.46 * np.cos( w[1:] )/d )
-
-        elif filt == 'hanning':
-            filtarr[1:] *= ( 1.0 + np.cos( w[1:]/d )/2.0 )
-
-        if dpc is False:
-            filtarr = np.concatenate( ( filtarr , filtarr[nfreq-1:0:-1] ) , axis=0 )
-        else:
-            filtarr = np.concatenate( ( filtarr , np.conjugate( filtarr[nfreq-1:0:-1] ) ) , axis=0 ) 
-
-    else:
-        filtarr = np.zeros( 2 * nfreq )
-
-    return filtarr
-
-
-
-
-##########################################################
-##########################################################
-####                                                  ####
 ####                        IRADON                    ####
 ####                                                  ####
 ##########################################################
@@ -200,26 +159,11 @@ def iradon( sino , npix , angles , ctr , filt , interp , dpc , args ):
 
     
     ##  Filter projections
-    if filt != 'none':
-        ##  Pre-calculate filter 
-        nfreq = 2 * int( 2**( int( np.ceil( np.log2( npix ) ) ) ) )
-        filtarr = calc_filter( nfreq , filt , dpc )  
-
-
-        ##  Zero-pad projections with the smallest power of 2 >= npix
-        sino_filt = np.concatenate( ( sino , np.zeros( ( nang , 2*nfreq - npix ) ) ) , axis=1 )   
+    if filt is not None:
+        sino[:] = fil.filter_proj( sino , ftype=filt , dpc=dpc )
     
-    
-        ##  Filter projections in the Fourier space
-        for i in range( nang ):
-            sys.stdout.write( 'Filtering projection number %d\r' % ( i + 1 , ) )
-            sys.stdout.flush()
-
-            sino_filt[i,:] = np.real( np.fft.ifft( np.fft.fft( sino_filt[i,:] ) * filtarr ) )
-
-
-        ##  Replace values in the original array
-        sino[:,:] = sino_filt[:,:npix]
+        if args.plot is True:
+            dis.plot( sino , 'Filtered sinogram' )
 
 
 
@@ -296,13 +240,7 @@ def iradon( sino , npix , angles , ctr , filt , interp , dpc , args ):
             sci.misc.imsave( folder + 'reco_' + num_proj + '.jpg' , reco[::-1,:] )
 
 
-        
-        #elif interp == 'spl':
-        #    interp_contr = np.array( scint.griddata( points , sino_op[i,:] , 
-        #                             ( t ) , method='cubic' ) )
-        #    reco += interp_contr.reshape( npix , npix ) 
-
-
+    
     if dpc is False:
         reco *= np.pi / ( 2.0 * nang )
     else:
@@ -321,7 +259,7 @@ def iradon( sino , npix , angles , ctr , filt , interp , dpc , args ):
 ##########################################################
 ##########################################################
 
-def saveReco( reco , args ):
+def save_reco( reco , args ):
     if args.pathout is None:
         pathout = args.pathin
     else:
@@ -361,18 +299,21 @@ def main():
     startTime = time.time()
 
 
+
     ##  Get input arguments
     args = getArgs()
+
 
 
     ##  Get path to input reco
     pathin = args.pathin
 
 
+
     ##  Get input reco
     ##  You assume the reco to be square
     sino_name = pathin + args.sino
-    sino = io.readImage( sino_name )
+    sino = io.readImage( sino_name ).astype( myfloat )
     npix = sino.shape[1]
     nang = sino.shape[0]
 
@@ -380,10 +321,9 @@ def main():
     print('Number of projection angles: ', nang)
     print('Number of pixels: ', npix)
 
-
-    ##  Show reco
     if args.plot is True:
         dis.plot( sino , 'Sinogram' )
+
 
 
     ##  Get projection geometry  
@@ -404,6 +344,7 @@ def main():
     print('Number of projection angles: ', nang)
 
 
+
     ##  Get center of rotation
     print('\nCenter of rotation placed at pixel: ', args.ctr) 
 
@@ -411,7 +352,7 @@ def main():
         ctr = npix * 0.5
     else:
         ctr = args.ctr
-        sino = proc.sinoRotAxisCorrect( sino , ctr )
+        sino = proc.sino_correct_rot_axis( sino , ctr )
         ctr = npix * 0.5 
 
 
@@ -419,7 +360,7 @@ def main():
     ##  Enable edge padding
     if args.edge_padding is True:
         npix_old = sino.shape[1]
-        sino = proc.edgePadding( sino , 0.5 )
+        sino = proc.sino_edge_padding( sino , 0.5 )
         npix = sino.shape[1]
         i1 = int( ( npix - npix_old ) * 0.5 )
         i2 = i1 + npix_old      
@@ -435,22 +376,8 @@ def main():
 
     ##  Get filter type
     filt = args.filt
-    if filt == 'ram-lak':
-        print('\nSelected filter: RAM-LAK')
-    elif filt == 'shepp-logan':
-        print('\nSelected filter: SHEPP-LOGAN')
-    elif filt == 'cosine':
-        print('\nSelected filter: COSINE')
-    elif filt == 'hamming':
-        print('\nSelected filter: HAMMING')
-    elif filt == 'hanning':
-        print('\nSelected filter: HANNING')
-    elif filt == 'none':
-        print('\nSelected filter: NONE')
-    else:
-        print('\nWARNING: ', filt,' does not correspond to any available \
-                 filter; RAM-LAK is automatically chosen')
-        filt = 'ram-lak' 
+    print( 'Selected filter: ', filt )
+
 
 
     ##  Get interpolation scheme
@@ -459,13 +386,7 @@ def main():
         print('\nSelected interpolation scheme: nearest neighbour')
     elif interp == 'lin':
         print('\nSelected interpolation scheme: linear interpolation')
-    elif interp == 'spl':
-        print('\nSelected interpolation scheme: spline interpolation') 
-    else:
-        print('''\nWARNING: ', interp,' does not correspond to any available
-                  interpolation scheme; nearest neighbour interpolation will
-                  be adopted''')
-        interp = 'nn'
+
 
 
     ##  Compute iradon transform
@@ -474,24 +395,24 @@ def main():
     reco[:,:] = iradon( sino[:,::-1] , npix , angles , ctr , filt , interp , dpc , args )
 
 
-    ##  Rotate reconstruction
-    #reco[:,:] = np.rot90( reco , 2 )
-
 
     ##  Remove edge padding
     if args.edge_padding is True:
         reco = reco[i1:i2,i1:i2]     
 
     
-    ##  Show sino     
+    
+    ##  Show reconstruction     
     if args.plot is True:
         dis.plot( reco , 'Sinogram' )
 
 
-    ##  Save sino
-    saveReco( reco , args )
 
-    
+    ##  Save sino
+    save_reco( reco , args )
+
+
+
     ##  Time elapsed for the computation of the radon transform
     endTime = time.time()
     print('\n\nTime elapsed: ', (endTime-startTime)/60.0)

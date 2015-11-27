@@ -2,9 +2,9 @@
 #################################################################################
 #################################################################################
 #######                                                                   #######
-#######                          RADON TRANSFORM                          #######
+#######     FILTERED BACKPROJECTION BASED ON A CUBIC RADON TRANSFORM      #######
 #######                                                                   #######
-#######        Author: Filippo Arcadu, arcusfil@gmail.com, 01/03/2013     #######
+#######      Author: Filippo Arcadu, arcusfil@gmail.com, 01/03/2013       #######
 #######                                                                   #######
 #################################################################################
 #################################################################################
@@ -32,8 +32,6 @@ from scipy import misc
 import myImageIO as io
 import myImageDisplay as dis
 import myImageProcess as proc
-
-import filters as fil
 import bspline_functions as bfun
 import class_projectors_bspline as cpb  
 
@@ -41,7 +39,9 @@ import class_projectors_bspline as cpb
 
 
 ####  MY FORMAT VARIABLES
-myfloat = np.float32
+myint     = np.int
+myfloat   = np.float32
+mycomplex = np.complex64
 
 
 
@@ -133,47 +133,26 @@ def getArgs():
 ##########################################################
 ########################################################## 
 
-def fbp_bspline( sino , angles , ctr , filt , lut ,  proj_support_y ,
-                 bspline_degree , rd , plot ):
+def fbp_bspline( sino , angles , filt , bspline_degree , rd , plot ):
     
     ##  Initialize backprojector
-    n = sino.shape[1];  a = angles.copy()
-    tp = cpb.projectors( n , a ,  bspline_degree=3 , proj_support_y=4 , 
-                          radon_degree=rd , filt=filt , plot=plot )
+    sino = sino.astype( myfloat )   
+    m , n = sino.shape;  a = angles.copy()
+    tp = cpb.projectors( n , a ,  bspline_degree=bspline_degree ,
+                         proj_support_y=bspline_degree+1 , 
+                         radon_degree=rd , filt=filt , plot=plot )
 
 
 
-    ##  Get number of angles
-    nang , npix = sino.shape
-    pp = np.array( [ lut.shape[1] , proj_support_y ] , dtype=myfloat )
-
-
-
-    ##  Pre-calculate sin and cos values
-    cos = np.cos( angles )
-    sin = np.sin( angles )
-
-
-    
-    ##  Create grid of coordinates for the reconstruction
-    x = np.arange( - ( npix * 0.5  - 1 ) , npix * 0.5 + 1 )
-    x = np.kron( np.ones( ( npix , 1 ) ) , x ) 
-    y = np.rot90( x )
-
-
-    
     ##  Filtered Backprojection
-    sino = sino.astype( myfloat )
-    lut = lut.astype( myfloat )
-    angles = angles.astype( myfloat )
-
     time1 = time.time()
     reco = tp.fbp( sino ) 
     time2 = time.time() 
 
-    reco *= np.pi / ( 2.0 *nang )
 
-    reco[:,:] = bfun.convert_from_bspline_to_pixel_basis( reco , bspline_degree )       
+    
+    ##  Convert reconstruction from cubic B-spline to pixel basis
+    reco[:,:] = tp.conv_to_pix( reco )       
         
     
     return reco 
@@ -189,7 +168,7 @@ def fbp_bspline( sino , angles , ctr , filt , lut ,  proj_support_y ,
 ##########################################################
 ##########################################################
 
-def saveReco( reco , args ):
+def save_reco( reco , args ):
     if args.pathout is None:
         pathout = args.pathin
     else:
@@ -245,7 +224,7 @@ def main():
     ##  Get input reco
     ##  You assume the reco to be square
     sino_name = pathin + args.sino
-    sino = io.readImage( sino_name )
+    sino = io.readImage( sino_name ).astype( myfloat )
     npix = sino.shape[1]
     nang = sino.shape[0]
 
@@ -274,6 +253,7 @@ def main():
         print('\nReading list of projection angles: ', geometryfile)
 
     print('Number of projection angles: ', nang)
+    print('\nAngles:\n' , angles )
 
 
 
@@ -284,7 +264,7 @@ def main():
         ctr = npix * 0.5 + 1
     else:
         ctr = args.ctr  
-        sino = proc.sinoRotAxisCorrect( sino , ctr )
+        sino = proc.sino_correct_rot_axis( sino , ctr )
         ctr = npix * 0.5 + 1
 
 
@@ -293,7 +273,7 @@ def main():
     ##  Enable edge padding
     if args.edge_padding is True:
         npix_old = sino.shape[1]
-        sino = proc.edgePadding( sino , 0.5 )
+        sino = proc.sino_edge_padding( sino , 0.5 )
         npix = sino.shape[1]
         i1 = int( ( npix - npix_old ) * 0.5 )
         i2 = i1 + npix_old      
@@ -303,24 +283,7 @@ def main():
 
     ##  Get filter type
     filt = args.filt
-    if filt == 'ram-lak':
-        print('\nSelected filter: RAM-LAK')
-    elif filt == 'shepp-logan':
-        print('\nSelected filter: SHEPP-LOGAN')
-    elif filt == 'cosine':
-        print('\nSelected filter: COSINE')
-    elif filt == 'hamming':
-        print('\nSelected filter: HAMMING')
-    elif filt == 'hanning':
-        print('\nSelected filter: HANNING')
-    elif filt == 'none':
-        print('\nSelected filter: NONE')
-    elif filt == 'convolve':
-        print('\nSelected filter: CONVOLUTION with IFT of RAM-LAK') 
-    else:
-        print('\nWARNING: ', filt,' does not correspond to any available \
-                 filter; RAM-LAK is automatically chosen')
-        filt = 'ram-lak' 
+    print('\nSelected filter: ', filt)
 
 
 
@@ -338,20 +301,13 @@ def main():
     print('LUT density: ', nsamples_y)
     print('B-Spline support: ', proj_support_y)
     print('Radon transform degree: ', rt_degree)
-    print('\nAngles:\n' , angles )
 
 
-
-    ##  Precalculate look-up-table for B-spline
-    lut = bfun.init_lut_bspline( nsamples_y , angles , bspline_degree ,
-                                 rt_degree , proj_support_y )
-
-    
 
     ##  Compute iradon transform
     print('\nPerforming Filtered Backprojection ....\n')
-    reco = fbp_bspline( sino , angles , ctr , filt , lut ,
-                        proj_support_y , bspline_degree , 
+    reco = fbp_bspline( sino[:,::-1] , angles , filt , 
+                        bspline_degree , 
                         rt_degree , args.plot )
 
 
@@ -369,7 +325,7 @@ def main():
 
 
     ##  Save sino
-    saveReco( reco , args )
+    save_reco( reco , args )
 
     
 
