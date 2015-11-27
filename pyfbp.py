@@ -2,7 +2,7 @@
 #################################################################################
 #################################################################################
 #######                                                                   #######
-#######                          RADON TRANSFORM                          #######
+#######                    STANDARD FILTERED BACKPROJECTION               #######
 #######                                                                   #######
 #######        Author: Filippo Arcadu, arcusfil@gmail.com, 01/03/2013     #######
 #######                                                                   #######
@@ -145,7 +145,7 @@ def calc_filter( nfreq , filt , dpc ):
             w = 2 * np.pi * np.arange( nfreq + 1 ) / myfloat( 2 * nfreq )
             d = 1.0
         else:
-            filtarr = np.ones( nfreq + 1 , dtype=mycomplex ) * ( 1.0j ) / ( 2 + np.pi ) 
+            filtarr = np.ones( nfreq + 1 , dtype=mycomplex ) * ( 1.0j ) / ( 2 * np.pi ) 
 
         if filt == 'shepp-logan':
             filtarr[1:] *= np.sin( w[1:] ) / ( 2.0 * d * 2.0 * d * w[1:] )
@@ -303,8 +303,10 @@ def iradon( sino , npix , angles , ctr , filt , interp , dpc , args ):
         #    reco += interp_contr.reshape( npix , npix ) 
 
 
-    reco *= np.pi / ( 2.0 *nang )
-        
+    if dpc is False:
+        reco *= np.pi / ( 2.0 * nang )
+    else:
+        reco *= np.pi / ( 1.0 * nang ) 
     
     return reco 
 
