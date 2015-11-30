@@ -385,21 +385,6 @@ def main():
         ctr += i1
 
     
-    '''
-    ##  DPC reconstruction
-    dpc = args.dpc
-    print( 'DPC reconstruction: ' , dpc )
-
-
-    ##  DPC reconstruction
-    if args.dbp is True:
-        dpc = args.dbp
-        sino[:,:] = proc.diff_sino( sino ) 
-        if args.plot is True:
-            dis.plot( sino , 'Differential sinogram' )
-    print( 'DBP reconstruction: ' , dpc ) 
-    '''
-
 
     ##  Get filter type
     filt = args.filt
