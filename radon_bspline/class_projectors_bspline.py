@@ -48,8 +48,7 @@ class projectors:
         angles = ( angles * 180.0 )/myfloat( nang )         
         lut = bfun.init_lut_bspline( nsamples_y , angles , 
                                      bspline_degree ,
-                                     0 ,
-                                     #radon_degree , 
+                                     radon_degree , 
                                      proj_support_y )
         
        
