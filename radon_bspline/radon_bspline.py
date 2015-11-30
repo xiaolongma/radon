@@ -227,10 +227,12 @@ def main():
     tp = cpb.projectors( npix , angles , bspline_degree=deg , proj_support_y=sup ,
                          nsamples_y=2048 , radon_degree=1 , filt='ramp' , plot=True  )
 
-    sino = tp.A( image )
+    image[:] = image[::-1,::-1]
+    sino     = tp.A( image )
 
-    sino[:,:] = sino[:,::-1]
-    sino[:,:] = np.roll( sino , 1 , axis=1 )
+    if args.dpc is False:
+        sino[:,:] = sino[:,::-1]
+        sino[:,:] = np.roll( sino , 1 , axis=1 )
 
 
 
@@ -247,8 +249,8 @@ def main():
     
     ##  Time elapsed for the computation of the radon transform
     time2 = time.time()
-    print('\n\nTime elapsed to run the radon: ', (time2-time1)/60.0)
-    print('\n\nTime elapsed to run the radon: ', time2-time1) 
+    print('\n\nTime elapsed to run the radon: ', (time2-time1)/60.0,' min.')
+    print('Time elapsed to run the radon: ', time2-time1,' sec.') 
     print('\n')
 
 
