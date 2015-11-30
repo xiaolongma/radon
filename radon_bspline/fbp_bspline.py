@@ -140,7 +140,7 @@ def fbp_bspline( sino , angles , filt , bspline_degree , rd , plot ):
     m , n = sino.shape;  a = angles.copy()
     tp = cpb.projectors( n , a ,  bspline_degree=bspline_degree ,
                          proj_support_y=bspline_degree+1 , 
-                         radon_degree=0 , filt=filt , plot=plot )
+                         radon_degree=rd , filt=filt , plot=plot )
 
 
 
@@ -148,12 +148,6 @@ def fbp_bspline( sino , angles , filt , bspline_degree , rd , plot ):
     time1 = time.time()
     reco = tp.fbp( sino ) 
     time2 = time.time() 
-
-
-    
-    ##  Convert reconstruction from cubic B-spline to pixel basis
-    reco[:,:] = tp.conv_to_pix( reco )       
-        
     
     return reco 
 

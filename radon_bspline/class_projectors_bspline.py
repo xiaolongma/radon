@@ -43,13 +43,14 @@ class projectors:
     
         ##  Compute regridding look-up-table and deapodizer
         self.plot = plot
-        nang = len( angles )
-        angles = np.arange( nang )
-        angles = ( angles * 180.0 )/myfloat( nang )         
-        lut = bfun.init_lut_bspline( nsamples_y , angles , 
-                                     bspline_degree ,
-                                     radon_degree , 
-                                     proj_support_y )
+        nang      = len( angles )
+        angles    = np.arange( nang )
+        angles    = ( angles * 180.0 )/myfloat( nang )
+        rd        = 0
+        lut       = bfun.init_lut_bspline( nsamples_y , angles , 
+                                           bspline_degree ,
+                                           rd , 
+                                           proj_support_y )
         
        
         if plot is True:
