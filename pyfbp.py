@@ -99,7 +99,7 @@ def getArgs():
                         help='Select interpolation scheme: \
                               ram-lak , shepp-logan , cosine , hamming , hanning , none')  
     
-    parser.add_argument('-w',dest='interp', default='nn',
+    parser.add_argument('-w',dest='interp', default='lin',
                         help='''Select interpolation scheme:
                               nearest neighbour  --->  nn
                               linear  ---> lin
@@ -114,6 +114,9 @@ def getArgs():
 
     parser.add_argument('-dpc',dest='dpc', action='store_true',
                         help='Perform DPC reconstruction') 
+
+    parser.add_argument('-dbp',dest='dbp', action='store_true',
+                        help='Perform DBP reconstruction')        
     
     args = parser.parse_args()
     
@@ -345,6 +348,21 @@ def main():
 
 
 
+    ##  DPC reconstruction
+    dpc = args.dpc
+    print( 'DPC reconstruction: ' , dpc )
+
+
+    ##  DPC reconstruction
+    if args.dbp is True:
+        dpc = args.dbp
+        sino[:,:] = proc.diff_sino( sino ) 
+        if args.plot is True:
+            dis.plot( sino , 'Differential sinogram' )
+    print( 'DBP reconstruction: ' , dpc )
+
+
+
     ##  Get center of rotation
     print('\nCenter of rotation placed at pixel: ', args.ctr) 
 
@@ -367,11 +385,20 @@ def main():
         ctr += i1
 
     
-
+    '''
     ##  DPC reconstruction
     dpc = args.dpc
     print( 'DPC reconstruction: ' , dpc )
 
+
+    ##  DPC reconstruction
+    if args.dbp is True:
+        dpc = args.dbp
+        sino[:,:] = proc.diff_sino( sino ) 
+        if args.plot is True:
+            dis.plot( sino , 'Differential sinogram' )
+    print( 'DBP reconstruction: ' , dpc ) 
+    '''
 
 
     ##  Get filter type
