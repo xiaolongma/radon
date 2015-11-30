@@ -221,18 +221,22 @@ def main():
 
     
     ##  Create projector class
+    if args.dpc is False:
+        rd = 0
+    else:
+        rd = 1
+
     deg = args.bspline_degree
     sup = deg + 1
 
+    print('\nSelected B-spline degree: ', deg)
+    print('Selected Radon degree: ', rd )
+
     tp = cpb.projectors( npix , angles , bspline_degree=deg , proj_support_y=sup ,
-                         nsamples_y=2048 , radon_degree=1 , filt='ramp' , plot=True  )
+                         nsamples_y=2048 , radon_degree=rd , filt='ramp' , plot=True  )
 
     image[:] = image[::-1,::-1]
     sino     = tp.A( image )
-
-    if args.dpc is False:
-        sino[:,:] = sino[:,::-1]
-        sino[:,:] = np.roll( sino , 1 , axis=1 )
 
 
 

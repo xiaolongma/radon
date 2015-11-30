@@ -263,10 +263,10 @@ def main():
     if args.ctr is None:
         ctr = npix * 0.5 + 1
     else:
-        ctr = args.ctr  
-        sino = proc.sino_correct_rot_axis( sino , ctr )
-        ctr = npix * 0.5 + 1
+        ctr = args.ctr
 
+    sino = proc.sino_correct_rot_axis( sino , ctr )
+    ctr  = npix * 0.5
 
 
 
