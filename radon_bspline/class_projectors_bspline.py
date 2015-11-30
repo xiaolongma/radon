@@ -39,18 +39,21 @@ class projectors:
 
     ##  Init class projectors
     def __init__( self , npix , angles , ctr=0.0 , bspline_degree = 3 , proj_support_y=4 ,
-                  nsamples_y=2048 , radon_degree=0 , filt='ramp' , plot=False ):
+                  nsamples_y=2048 , radon_degree=0 , filt='ramp' , back='False', plot=False ):
     
         ##  Compute regridding look-up-table and deapodizer
         self.plot = plot
         nang      = len( angles )
         angles    = np.arange( nang )
         angles    = ( angles * 180.0 )/myfloat( nang )
-        rd        = 0
-        lut       = bfun.init_lut_bspline( nsamples_y , angles , 
-                                           bspline_degree ,
-                                           rd , 
-                                           proj_support_y )
+        if back is False:
+            rd = radon_degree
+        else:
+            rd = 0
+        lut = bfun.init_lut_bspline( nsamples_y , angles , 
+                                     bspline_degree ,
+                                     rd , 
+                                     proj_support_y )
         
        
         if plot is True:

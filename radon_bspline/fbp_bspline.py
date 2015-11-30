@@ -140,7 +140,8 @@ def fbp_bspline( sino , angles , filt , bspline_degree , rd , plot ):
     m , n = sino.shape;  a = angles.copy()
     tp = cpb.projectors( n , a ,  bspline_degree=bspline_degree ,
                          proj_support_y=bspline_degree+1 , 
-                         radon_degree=rd , filt=filt , plot=plot )
+                         radon_degree=rd , back=True , 
+                         filt=filt , plot=plot )
 
 
 

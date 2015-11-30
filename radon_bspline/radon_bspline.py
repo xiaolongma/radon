@@ -233,7 +233,8 @@ def main():
     print('Selected Radon degree: ', rd )
 
     tp = cpb.projectors( npix , angles , bspline_degree=deg , proj_support_y=sup ,
-                         nsamples_y=2048 , radon_degree=rd , filt='ramp' , plot=True  )
+                         nsamples_y=2048 , radon_degree=rd , filt='ramp' , 
+                         back = False , plot=True  )
 
     image[:] = image[::-1,::-1]
     sino     = tp.A( image )
