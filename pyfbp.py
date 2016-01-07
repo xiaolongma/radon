@@ -271,7 +271,7 @@ def save_reco( reco , args ):
     if args.reco is None:
         filename = args.sino
         filename = filename[:len(filename)-4]
-        filename += '_pyfbp' + '_rec.DMP'
+        filename += '_pyfbp' + '_reco.DMP'
         filename = pathout + filename
     else:
         filename = pathout + args.reco
