@@ -271,7 +271,7 @@ def save_reco( reco , args ):
     if args.reco is None:
         filename = args.sino
         filename = filename[:len(filename)-4]
-        filename += '_ang' + str( args.nang ) + '_pyfbp_' + args.interp + '_rec.DMP'
+        filename += '_pyfbp' + '_rec.DMP'
         filename = pathout + filename
     else:
         filename = pathout + args.reco
@@ -416,7 +416,7 @@ def main():
     
     ##  Show reconstruction     
     if args.plot is True:
-        dis.plot( reco , 'Sinogram' )
+        dis.plot( reco , 'Reconstruction' )
 
 
 
