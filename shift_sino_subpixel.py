@@ -13,7 +13,7 @@ def main():
     ctr = np.float32( sys.argv[2] )
     dis.plot( sino , 'Input sinogram' )
 
-    sino_new = proc.sinoRotAxisCorrect( sino , ctr )
+    sino_new = proc.sino_correct_rot_axis( sino , ctr )
     '''
     nang , npix = sino.shape
     sino_out = sino.copy()
